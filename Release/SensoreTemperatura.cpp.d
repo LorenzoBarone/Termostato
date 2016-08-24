@@ -1,25 +1,26 @@
 C:\Users\lorenzo\AppData\Local\Temp\VMicroBuilds\SensoreTemperatura\uno\SensoreTemperatura.cpp.o: \
  C:\Users\lorenzo\AppData\Local\Temp\VMicroBuilds\SensoreTemperatura\uno\SensoreTemperatura.cpp \
- C:\Users\lorenzo\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.13\cores\arduino/arduino.h \
- C:\Users\lorenzo\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.13\cores\arduino/binary.h \
- C:\Users\lorenzo\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.13\cores\arduino/WCharacter.h \
- C:\Users\lorenzo\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.13\cores\arduino/WString.h \
- C:\Users\lorenzo\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.13\cores\arduino/HardwareSerial.h \
- C:\Users\lorenzo\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.13\cores\arduino/Stream.h \
- C:\Users\lorenzo\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.13\cores\arduino/Print.h \
- C:\Users\lorenzo\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.13\cores\arduino/Printable.h \
- C:\Users\lorenzo\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.13\cores\arduino/USBAPI.h \
- C:\Users\lorenzo\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.13\cores\arduino/Arduino.h \
- C:\Users\lorenzo\AppData\Local\arduino15\packages\arduino\hardware\avr\1.6.13\variants\standard/pins_arduino.h \
- C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS\src/Arduino_FreeRTOS.h \
- C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS\src/FreeRTOSConfig.h \
- C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS\src/projdefs.h \
- C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS\src/portmacro.h \
- C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS\src/portable.h \
- C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS\src/mpu_wrappers.h \
- C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS\src/FreeRTOSVariant.h \
- C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS\src/Arduino_FreeRTOS.h \
- C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS\src/task.h \
- C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS\src/list.h \
- C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS\src/semphr.h \
- C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS\src/queue.h
+ C:\Program\ Files\ (x86)\Arduino\hardware\arduino\avr\cores\arduino/arduino.h \
+ C:\Program\ Files\ (x86)\Arduino\hardware\arduino\avr\cores\arduino/binary.h \
+ C:\Program\ Files\ (x86)\Arduino\hardware\arduino\avr\cores\arduino/WCharacter.h \
+ C:\Program\ Files\ (x86)\Arduino\hardware\arduino\avr\cores\arduino/WString.h \
+ C:\Program\ Files\ (x86)\Arduino\hardware\arduino\avr\cores\arduino/HardwareSerial.h \
+ C:\Program\ Files\ (x86)\Arduino\hardware\arduino\avr\cores\arduino/Stream.h \
+ C:\Program\ Files\ (x86)\Arduino\hardware\arduino\avr\cores\arduino/Print.h \
+ C:\Program\ Files\ (x86)\Arduino\hardware\arduino\avr\cores\arduino/Printable.h \
+ C:\Program\ Files\ (x86)\Arduino\hardware\arduino\avr\cores\arduino/USBAPI.h \
+ C:\Program\ Files\ (x86)\Arduino\hardware\arduino\avr\cores\arduino/Arduino.h \
+ C:\Program\ Files\ (x86)\Arduino\hardware\arduino\avr\variants\standard/pins_arduino.h \
+ C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS_AVR\src/FreeRTOS_AVR.h \
+ C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS_AVR\src/utility/FreeRTOS.h \
+ C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS_AVR\src/utility/FreeRTOSConfig.h \
+ C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS_AVR\src/utility/projdefs.h \
+ C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS_AVR\src/utility/portable.h \
+ C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS_AVR\src/utility/deprecated_definitions.h \
+ C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS_AVR\src/utility/portmacro.h \
+ C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS_AVR\src/utility/mpu_wrappers.h \
+ C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS_AVR\src/utility/task.h \
+ C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS_AVR\src/utility/list.h \
+ C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS_AVR\src/utility/queue.h \
+ C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS_AVR\src/utility/semphr.h \
+ C:\Users\lorenzo\Documents\Arduino\libraries\FreeRTOS_AVR\src/utility/queue.h
