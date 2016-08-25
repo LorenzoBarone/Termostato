@@ -20,7 +20,9 @@
 #define TDELAYT2  20
 #define TDELAYSERIAL configTICK_RATE_HZ
 #define TDELAYMOTOR 1
-const TickType_t xFrequency = 1;
+#define TDELAYSERIALR configTICK_RATE_HZ 
+
+const TickType_t xFrequency = 2;
 
 
 volatile  uint32_t tmax = 0;
@@ -29,10 +31,17 @@ volatile  double T1, T2;
 volatile  int nReadT1=0, nReadT2=0;
 volatile  int np = 0;
 volatile  int step = 0;
+volatile  int stepToDo;
+volatile  int acc[10];
+volatile  bool start = false;
+String dato = "        ";
+
+
 // These constants won't change.  They're used to give names
 // to the pins used:
 
 SemaphoreHandle_t xSerialSemaphore;
+TaskHandle_t xHandle = NULL;
 
 const int analogInPinTemperature0 = A0;  // Analog input pin for the Sensor 1 
 const int analogInPinTemperature1 = A1;  // Analog input pin for the Sensor 2 now not used
@@ -42,8 +51,8 @@ const int ledPin = 13;
 void TaskTemp1(void *pvParameters);
 void TaskTemp2(void *pvParameters);
 void TaskMotor(void *pvParameters);
-void TaskSerial(void *pvParameters);
-
+void TaskSerialTrace(void *pvParameters);
+void TaskSerialRead(void *pvParameters);
 
 
 void setup() {
@@ -69,17 +78,17 @@ void setup() {
   xTaskCreate(
 	  TaskTemp1
 	  , (const portCHAR *)"T1"  // A name just for humans
-	  , configMINIMAL_STACK_SIZE + 100 // This stack size can be checked & adjusted by reading the Stack Highwater
+	  , configMINIMAL_STACK_SIZE  // This stack size can be checked & adjusted by reading the Stack Highwater
 	  , NULL
-	  , 1  // Priority, with 1 being the highest, and 4 being the lowest.
+	  , 2  // Priority, with 1 being the highest, and 4 being the lowest.
 	  , NULL);
 
   xTaskCreate(
 	  TaskTemp2
 	  , (const portCHAR *) "T2"
-	  , configMINIMAL_STACK_SIZE + 100   // Stack size
+	  , configMINIMAL_STACK_SIZE    // Stack size
 	  , NULL
-	  , 1  // Priority
+	  , 2  // Priority
 	  , NULL);
 
   // Now the Task scheduler, which takes over control of scheduling individual Tasks, is automatically started.
@@ -87,16 +96,24 @@ void setup() {
   xTaskCreate(
 	  TaskMotor
 	  , (const portCHAR *) "TMotor"
-	  , configMINIMAL_STACK_SIZE + 256  // Stack size
+	  , configMINIMAL_STACK_SIZE + 100 // Stack size
 	  , NULL
 	  , 2// Priority
 	  , NULL);
 
 
   xTaskCreate(
-	  TaskSerial
-	  , (const portCHAR *) "TSerial"
-	  , configMINIMAL_STACK_SIZE + 200 // Stack size
+	  TaskSerialTrace
+	  , (const portCHAR *) "TSerT"
+	  , configMINIMAL_STACK_SIZE +100 // Stack size
+	  , NULL
+	  , 1 // Priority
+	  , NULL);
+
+  xTaskCreate(
+	  TaskSerialRead
+	  , (const portCHAR *) "TSerR"
+	  , configMINIMAL_STACK_SIZE +200 // Stack size
 	  , NULL
 	  , 1 // Priority
 	  , NULL);
@@ -151,7 +168,9 @@ void TaskMotor(void *pvParameters __attribute__((unused))) {
 		uint32_t tlast = micros();
 		bool statoLed = true;
 		TickType_t xLastWakeTime;
-
+		int direction;
+		long int tick;
+		int passo;
 
 		// Initialise the xLastWakeTime variable with the current time.
 		xLastWakeTime = xTaskGetTickCount();
@@ -159,27 +178,56 @@ void TaskMotor(void *pvParameters __attribute__((unused))) {
 			// Wait for the next cycle.
 		    vTaskDelayUntil(&xLastWakeTime, xFrequency);
 			//vTaskDelay(TDELAYMOTOR);
-			// get wake time
 			uint32_t tmp = micros();
 			uint32_t diff = tmp - tlast;
-			tlast = tmp; 
+			tlast = tmp;
 			if (diff < tmin) tmin = diff;
 			if (diff > tmax) tmax = diff;
+
+
+			if (start) {
+				start = false;
+				step = abs(stepToDo);
+				if (stepToDo < 0)  ( direction = LOW);
+				tick = 0;
+			}
+			if (step > 0) {
+				if (step < acc[0]) passo = 10;
+				if (step >= acc[0] && step < acc[1]) passo = 8;
+				if (step >= acc[1] && step < acc[2]) passo = 6;
+				if (step >= acc[2] && step < acc[3]) passo = 4;
+				if (step >= acc[3] && step < acc[4]) passo = 2;
+				if (step >= acc[4] && step < acc[5]) passo = 1;
+				if (step >= acc[5] && step < acc[6]) passo = 2;
+				if (step >= acc[6] && step < acc[7]) passo = 4;
+				if (step >= acc[7] && step < acc[8]) passo = 6;
+				if (step >= acc[8] && step < acc[9]) passo = 8;
+				if (step >= acc[9]) passo = 10;
+				
+				if (((tick % passo) == 0)) {
+					/*digitalWrite(ledPin, 1);
+					digitalWrite(ledPin, 1);
+					digitalWrite(ledPin, 0);*/
+					digitalWrite(ledPin, statoLed);
+					statoLed = !statoLed;
+					step--;
+				}
+				tick++;
+			}
+			// get wake time
 			
-			digitalWrite(ledPin, statoLed);
-			statoLed = !statoLed;
-			//digitalWrite(ledPin, 0);
-			//digitalWrite(ledPin, 1);
-			step++;
+
+			
 		}
 
 
 }
-void TaskSerial(void *pvParameters __attribute__((unused))) {
+
+void TaskSerialTrace(void *pvParameters __attribute__((unused))) {
 	uint8_t np = 0;
 	while (true) {
 
-		if (xSemaphoreTake(xSerialSemaphore, (TickType_t)2) == pdTRUE)
+		if (xSemaphoreTake(xSerialSemaphore, (TickType_t)10) == pdTRUE)
 
 			Serial.print("N Value for A0 read at: ");
 			Serial.print(nReadT1);
@@ -203,7 +251,7 @@ void TaskSerial(void *pvParameters __attribute__((unused))) {
 				tmin = 0XFFFFFFFF;
 				tmax = 0;
 				Serial.println("clear");
-				step = 0;
+				
 			}
 					
 			Serial.flush();
@@ -214,6 +262,57 @@ void TaskSerial(void *pvParameters __attribute__((unused))) {
 		
 
 	
+}
+
+
+void TaskSerialRead(void *pvParameters __attribute__((unused))) {
+	char c;
+	int instep=32000;
+	
+
+	while (true) {
+		vTaskDelay(TDELAYSERIALR); 
+		//dato = "";
+		if (xSemaphoreTake(xSerialSemaphore, (TickType_t)10) == pdTRUE) {
+		    dato = "";
+			while (Serial.available() > 0) {
+				c = Serial.read();
+				Serial.print(c);
+				dato += c;
+			}
+			//instep = dato.toInt();
+			if (dato !="") {
+				Serial.print("dato letto = ");
+				Serial.print(dato);
+			}
+			instep = dato.toInt();
+			//Serial.flush();
+		}
+		xSemaphoreGive(xSerialSemaphore);
+		if (instep) {
+			stepToDo = instep;
+			int rampa = instep /50;
+			acc[0] = rampa;
+			acc[1] = acc[0] + rampa;
+			acc[2] = acc[1] + rampa;
+			acc[3] = acc[2] + rampa;
+			acc[4] = acc[3] + rampa;
+			acc[5] = stepToDo - acc[4];
+			acc[6] = stepToDo - acc[3];
+			acc[7] = stepToDo - acc[2];
+			acc[8] = stepToDo - acc[1];
+			acc[9] = stepToDo - acc[0];
+			//noInterrupts();
+				start = true;
+			//interrupts();
+			instep = 0;
+		}
+	}
+
+
+
+
+
 }
 
 
