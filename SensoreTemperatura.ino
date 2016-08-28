@@ -1,17 +1,21 @@
 /*
   Read Temperature for the sensor MPC 9701/A connected ad A0 and Write the value in Serial Port
   Try to use FreeRTOS in the version of: https://github.com/greiman/FreeRTOS-Arduino
-
+    
   Generate a signal to drive a stepper motor
 
  */
 
 
 #include <FreeRTOS_AVR.h>
+#include <Esplora.h>
+#include <TFT.h>            // Arduino LCD library
+#include <SPI.h>
+//#include <FreeRTOS_ARM.h>
 //#include <semphr.h>  // ad the FreeRTOS functions for Semaphores (or Flags).
 
 
-#define VREF 1.1
+#define VREF 5.0
 #define V0 (0.4)
 #define DELTAVT (0.0195)
 #define STEP (VREF/1024.0)
@@ -19,33 +23,42 @@
 #define TDELAYT1  10
 #define TDELAYT2  20
 #define TDELAYSERIAL configTICK_RATE_HZ
-#define TDELAYMOTOR 1
-#define TDELAYSERIALR configTICK_RATE_HZ 
-
-const TickType_t xFrequency = 2;
+#define TDELAYMOTOR 5
+#define TDELAYSERIALR configTICK_RATE_HZ
+#define TDELAYDISPLAY configTICK_RATE_HZ
+#define ENABLE_STEPPER 8
+#define Z_DIR 7
+#define Z_STEP 4
+const TickType_t xFrequency = 4;
 
 
 volatile  uint32_t tmax = 0;
 volatile  uint32_t tmin = 0XFFFFFFFF;
-volatile  double T1, T2;
+volatile  int T1;
+volatile  double T2;
 volatile  int nReadT1=0, nReadT2=0;
 volatile  int np = 0;
-volatile  int step = 0;
-volatile  int stepToDo;
-volatile  int acc[10];
+volatile  long int step;
+volatile  long int stepToDo;
+volatile  long int acc[10];
 volatile  bool start = false;
+volatile  long int tick;
 String dato = "        ";
-
+String temperature = "T ?";
 
 // These constants won't change.  They're used to give names
 // to the pins used:
 
 SemaphoreHandle_t xSerialSemaphore;
-TaskHandle_t xHandle = NULL;
+char tempPrintout[3] = {'a','b','\0'};
 
-const int analogInPinTemperature0 = A0;  // Analog input pin for the Sensor 1 
-const int analogInPinTemperature1 = A1;  // Analog input pin for the Sensor 2 now not used
+//const int analogInPinTemperature0 = A0;  // Analog input pin for the Sensor 1 
+//const int analogInPinTemperature1 = A1;  // Analog input pin for the Sensor 2 now not used
 const int ledPin = 13;
+
+
+
+
 
 // define two Tasks for DigitalRead & AnalogRead
 void TaskTemp1(void *pvParameters);
@@ -53,13 +66,20 @@ void TaskTemp2(void *pvParameters);
 void TaskMotor(void *pvParameters);
 void TaskSerialTrace(void *pvParameters);
 void TaskSerialRead(void *pvParameters);
-
+void TaskDisplay(void *pvParameters);
 
 void setup() {
   // initialize serial communications at 115200 bps:
   Serial.begin(115200);
-  analogReference(INTERNAL);
+  while (!Serial);
+  //analogReference(INTERNAL);
   pinMode(ledPin, OUTPUT);
+  //analogReadResolution(10);
+  //analogReference(INTERNAL);
+  pinMode(ENABLE_STEPPER, OUTPUT);
+  digitalWrite(ENABLE_STEPPER, HIGH);
+  pinMode(Z_DIR, OUTPUT);
+  pinMode(Z_STEP, OUTPUT);
   /*
    Semaphores are useful to stop a Task proceeding, where it should be paused to wait,
    because it is sharing a resource, such as the Serial port.
@@ -96,16 +116,24 @@ void setup() {
   xTaskCreate(
 	  TaskMotor
 	  , (const portCHAR *) "TMotor"
-	  , configMINIMAL_STACK_SIZE + 100 // Stack size
+	  , configMINIMAL_STACK_SIZE  // Stack size
 	  , NULL
-	  , 2// Priority
+	  , 3// Priority
 	  , NULL);
 
 
   xTaskCreate(
 	  TaskSerialTrace
 	  , (const portCHAR *) "TSerT"
-	  , configMINIMAL_STACK_SIZE +100 // Stack size
+	  , configMINIMAL_STACK_SIZE + 200 // Stack size
+	  , NULL
+	  , 1 // Priority
+	  , NULL);
+
+  xTaskCreate(
+	  TaskDisplay
+	  , (const portCHAR *) "TSerT"
+	  , configMINIMAL_STACK_SIZE + 100 // Stack size
 	  , NULL
 	  , 1 // Priority
 	  , NULL);
@@ -113,7 +141,7 @@ void setup() {
   xTaskCreate(
 	  TaskSerialRead
 	  , (const portCHAR *) "TSerR"
-	  , configMINIMAL_STACK_SIZE +200 // Stack size
+	  , configMINIMAL_STACK_SIZE + 100 // Stack size
 	  , NULL
 	  , 1 // Priority
 	  , NULL);
@@ -138,9 +166,10 @@ void TaskTemp1(void *pvParameters __attribute__((unused))) {
 
 		int sensorValue = analogRead(A0);
 		// map it to Celsius Temperature:
-		T1 = ((STEP * sensorValue) - V0) / DELTAVT;
+		T1  = Esplora.readTemperature(DEGREES_C);
 		nReadT1++;
 		vTaskDelay(TDELAYT1);
+
 
 	}
 
@@ -158,7 +187,7 @@ void TaskTemp2(void *pvParameters __attribute__((unused))) {
 		nReadT2++;
 		vTaskDelay(TDELAYT2);
 	}
-
+	
 
 }
 
@@ -169,7 +198,7 @@ void TaskMotor(void *pvParameters __attribute__((unused))) {
 		bool statoLed = true;
 		TickType_t xLastWakeTime;
 		int direction;
-		long int tick;
+	//	long int tick;
 		int passo;
 
 		// Initialise the xLastWakeTime variable with the current time.
@@ -188,31 +217,36 @@ void TaskMotor(void *pvParameters __attribute__((unused))) {
 			if (start) {
 				start = false;
 				step = abs(stepToDo);
-				if (stepToDo < 0)  ( direction = LOW);
+				digitalWrite(ENABLE_STEPPER, LOW);
+				if (stepToDo < 0)   digitalWrite(Z_DIR, LOW); else digitalWrite(Z_DIR, HIGH);
 				tick = 0;
 			}
 			if (step > 0) {
-				if (step < acc[0]) passo = 10;
-				if (step >= acc[0] && step < acc[1]) passo = 8;
-				if (step >= acc[1] && step < acc[2]) passo = 6;
-				if (step >= acc[2] && step < acc[3]) passo = 4;
+				if (step < acc[0]) passo = 6;
+				if (step >= acc[0] && step < acc[1]) passo = 5;
+				if (step >= acc[1] && step < acc[2]) passo = 4;
+				if (step >= acc[2] && step < acc[3]) passo = 3;
 				if (step >= acc[3] && step < acc[4]) passo = 2;
 				if (step >= acc[4] && step < acc[5]) passo = 1;
 				if (step >= acc[5] && step < acc[6]) passo = 2;
-				if (step >= acc[6] && step < acc[7]) passo = 4;
-				if (step >= acc[7] && step < acc[8]) passo = 6;
-				if (step >= acc[8] && step < acc[9]) passo = 8;
-				if (step >= acc[9]) passo = 10;
+				if (step >= acc[6] && step < acc[7]) passo = 3;
+				if (step >= acc[7] && step < acc[8]) passo = 4;
+				if (step >= acc[8] && step < acc[9]) passo = 5;
+				if (step >= acc[9]) passo = 6;
 				
 				if (((tick % passo) == 0)) {
-					/*digitalWrite(ledPin, 1);
-					digitalWrite(ledPin, 1);
-					digitalWrite(ledPin, 0);*/
+					digitalWrite(Z_STEP, 1);
+					digitalWrite(Z_STEP, 1);
+					digitalWrite(Z_STEP, 0);
 					digitalWrite(ledPin, statoLed);
 					statoLed = !statoLed;
 					step--;
 				}
 				tick++;
+			}
+			if (step == 0) {
+				digitalWrite(ENABLE_STEPPER, HIGH);
+				
 			}
 			// get wake time
 			
@@ -225,9 +259,10 @@ void TaskMotor(void *pvParameters __attribute__((unused))) {
 
 void TaskSerialTrace(void *pvParameters __attribute__((unused))) {
 	uint8_t np = 0;
+	vTaskDelay(TDELAYSERIAL / 2);
 	while (true) {
 
-		if (xSemaphoreTake(xSerialSemaphore, (TickType_t)10) == pdTRUE)
+		if (xSemaphoreTake(xSerialSemaphore, (TickType_t)25) == pdTRUE)
 
 			Serial.print("N Value for A0 read at: ");
 			Serial.print(nReadT1);
@@ -245,7 +280,10 @@ void TaskSerialTrace(void *pvParameters __attribute__((unused))) {
 			Serial.print("\ttmax = ");
 			Serial.print(tmax);
 			Serial.print("\tStep = ");
-			Serial.println(step);
+			Serial.print(step);
+
+			Serial.print("\ttick = ");
+			Serial.println(tick);
 			if (np++ >= 10) {
 				np = 0;
 				tmin = 0XFFFFFFFF;
@@ -254,7 +292,7 @@ void TaskSerialTrace(void *pvParameters __attribute__((unused))) {
 				
 			}
 					
-			Serial.flush();
+			//Serial.flush();
 			xSemaphoreGive(xSerialSemaphore);
 			vTaskDelay(TDELAYSERIAL);
 		}
@@ -267,13 +305,13 @@ void TaskSerialTrace(void *pvParameters __attribute__((unused))) {
 
 void TaskSerialRead(void *pvParameters __attribute__((unused))) {
 	char c;
-	int instep=32000;
+	long int instep=32000;
 	
 
 	while (true) {
 		vTaskDelay(TDELAYSERIALR); 
 		//dato = "";
-		if (xSemaphoreTake(xSerialSemaphore, (TickType_t)10) == pdTRUE) {
+		if (xSemaphoreTake(xSerialSemaphore, (TickType_t)20) == pdTRUE) {
 		    dato = "";
 			while (Serial.available() > 0) {
 				c = Serial.read();
@@ -291,20 +329,22 @@ void TaskSerialRead(void *pvParameters __attribute__((unused))) {
 		xSemaphoreGive(xSerialSemaphore);
 		if (instep) {
 			stepToDo = instep;
-			int rampa = instep /50;
-			acc[0] = rampa;
+			instep = abs(instep);
+			int rampa = instep /100;
+			if (rampa > 10) rampa = 10;
+			acc[0] = 5;
 			acc[1] = acc[0] + rampa;
 			acc[2] = acc[1] + rampa;
 			acc[3] = acc[2] + rampa;
-			acc[4] = acc[3] + rampa;
-			acc[5] = stepToDo - acc[4];
-			acc[6] = stepToDo - acc[3];
-			acc[7] = stepToDo - acc[2];
-			acc[8] = stepToDo - acc[1];
-			acc[9] = stepToDo - acc[0];
-			//noInterrupts();
+			acc[4] = acc[3] + rampa*4;
+			acc[5] = instep - acc[4];
+			acc[6] = instep - acc[3];
+			acc[7] = instep - acc[2];
+			acc[8] = instep - acc[1];
+			acc[9] = instep - acc[0];
+			noInterrupts();
 				start = true;
-			//interrupts();
+			interrupts();
 			instep = 0;
 		}
 	}
@@ -313,6 +353,40 @@ void TaskSerialRead(void *pvParameters __attribute__((unused))) {
 
 
 
+}
+
+void TaskDisplay(void *pvParameters __attribute__((unused))) {
+
+	// Put this line at the beginning of every sketch that uses the GLCD
+	EsploraTFT.begin();
+	//clear the screen with a black background
+	EsploraTFT.background(0, 0, 0);
+	// set the text color to magenta
+	EsploraTFT.stroke(200, 20, 180);
+	// set the text to size 
+	EsploraTFT.setTextSize(1);
+	// start the text at the top left of the screen
+	// this text is going to remain static
+	EsploraTFT.text("Temp. in gradi C :\n ", 0, 0);
+
+	// set the text in the loop to size 5
+	EsploraTFT.setTextSize(3);
+
+	for (;;) 	
+		{
+			vTaskDelay(TDELAYDISPLAY);
+			EsploraTFT.stroke(0, 0, 0);
+			EsploraTFT.text(tempPrintout, 0, 30);
+			// set the text color to white
+			EsploraTFT.stroke(255, 255, 255);
+			temperature= String(T1);
+			// print the temperature one line below the static text
+			temperature.toCharArray(tempPrintout, 3);
+			EsploraTFT.text(tempPrintout, 0, 30);
+		    // erase the text for the next loop
+			//EsploraTFT.stroke(0, 0, 0);
+			
+		}
 }
 
 
