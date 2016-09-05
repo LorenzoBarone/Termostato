@@ -31,7 +31,7 @@
 #define Z_STEP 4
 const TickType_t xFrequency = 4;
 
-
+//TFT pippo;
 volatile  uint32_t tmax = 0;
 volatile  uint32_t tmin = 0XFFFFFFFF;
 volatile  int T1;
@@ -370,19 +370,37 @@ void TaskDisplay(void *pvParameters __attribute__((unused))) {
 	EsploraTFT.text("Temp. in gradi C :\n ", 0, 0);
 
 	// set the text in the loop to size 5
-	EsploraTFT.setTextSize(3);
+    EsploraTFT.setTextSize(2);
+	//EsploraTFT.setTextWrap(false);
+	// 
 
+
+	int old = T1;
+	EsploraTFT.stroke(255, 255, 255);
+	EsploraTFT.setCursor(0, 30);
+	EsploraTFT.print(old);
 	for (;;) 	
-		{
+	{
+		 //TFT pippo;
+		 //pippo.
+		    
 			vTaskDelay(TDELAYDISPLAY);
-			EsploraTFT.stroke(0, 0, 0);
-			EsploraTFT.text(tempPrintout, 0, 30);
+			//EsploraTFT.stroke(0, 0, 0);
+			//EsploraTFT.text(tempPrintout, 0, 30);
 			// set the text color to white
-			EsploraTFT.stroke(255, 255, 255);
-			temperature= String(T1);
+			if (old != T1) {
+				EsploraTFT.stroke(0, 0, 0);
+				//EsploraTFT.print("lillo");
+				EsploraTFT.setCursor(0, 30);
+				EsploraTFT.print(old);
+				EsploraTFT.stroke(255, 255, 255);
+				EsploraTFT.setCursor(0, 30);
+				EsploraTFT.print(T1);
+				old = T1;
+			}
 			// print the temperature one line below the static text
-			temperature.toCharArray(tempPrintout, 3);
-			EsploraTFT.text(tempPrintout, 0, 30);
+			//temperature.toCharArray(tempPrintout, 3);
+			//EsploraTFT.text(tempPrintout, 0, 30);
 		    // erase the text for the next loop
 			//EsploraTFT.stroke(0, 0, 0);
 			
