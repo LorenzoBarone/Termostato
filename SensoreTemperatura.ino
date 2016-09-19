@@ -25,10 +25,10 @@
 #define TDELAYSERIAL configTICK_RATE_HZ
 #define TDELAYMOTOR 5
 #define TDELAYSERIALR configTICK_RATE_HZ
-#define TDELAYDISPLAY configTICK_RATE_HZ
+#define TDELAYDISPLAY configTICK_RATE_HZ /4
 #define ENABLE_STEPPER 8
-#define Z_DIR 7
-#define Z_STEP 4
+#define Z_DIR 3		// out 3	vecchio valore 7
+#define Z_STEP 6	// out 2	vecchio valore 11
 const TickType_t xFrequency = 4;
 
 //TFT pippo;
@@ -38,6 +38,7 @@ volatile  int T1;
 volatile  double T2;
 volatile  int nReadT1=0, nReadT2=0;
 volatile  int np = 0;
+volatile  int barra=0;
 volatile  long int step;
 volatile  long int stepToDo;
 volatile  long int acc[10];
@@ -71,7 +72,7 @@ void TaskDisplay(void *pvParameters);
 void setup() {
   // initialize serial communications at 115200 bps:
   Serial.begin(115200);
-  while (!Serial);
+    // while (!Serial);
   //analogReference(INTERNAL);
   pinMode(ledPin, OUTPUT);
   //analogReadResolution(10);
@@ -116,7 +117,7 @@ void setup() {
   xTaskCreate(
 	  TaskMotor
 	  , (const portCHAR *) "TMotor"
-	  , configMINIMAL_STACK_SIZE  // Stack size
+	  , configMINIMAL_STACK_SIZE  + 100// Stack size
 	  , NULL
 	  , 3// Priority
 	  , NULL);
@@ -132,8 +133,8 @@ void setup() {
 
   xTaskCreate(
 	  TaskDisplay
-	  , (const portCHAR *) "TSerT"
-	  , configMINIMAL_STACK_SIZE + 100 // Stack size
+	  , (const portCHAR *) "TDisp"
+	  , configMINIMAL_STACK_SIZE + 200 // Stack size
 	  , NULL
 	  , 1 // Priority
 	  , NULL);
@@ -168,6 +169,7 @@ void TaskTemp1(void *pvParameters __attribute__((unused))) {
 		// map it to Celsius Temperature:
 		T1  = Esplora.readTemperature(DEGREES_C);
 		nReadT1++;
+		barra = 1023 - Esplora.readSlider();
 		vTaskDelay(TDELAYT1);
 
 
@@ -240,6 +242,8 @@ void TaskMotor(void *pvParameters __attribute__((unused))) {
 					digitalWrite(Z_STEP, 0);
 					digitalWrite(ledPin, statoLed);
 					statoLed = !statoLed;
+					
+
 					step--;
 				}
 				tick++;
@@ -375,28 +379,60 @@ void TaskDisplay(void *pvParameters __attribute__((unused))) {
 	// 
 
 
-	int old = T1;
+	int T1Old = T1;
+	int barraOld = barra;
+	int stepOld = step;
 	EsploraTFT.stroke(255, 255, 255);
 	EsploraTFT.setCursor(0, 30);
-	EsploraTFT.print(old);
+	EsploraTFT.print(T1Old);
 	for (;;) 	
 	{
 		 //TFT pippo;
-		 //pippo.
+		 //pippo.w
 		    
 			vTaskDelay(TDELAYDISPLAY);
 			//EsploraTFT.stroke(0, 0, 0);
 			//EsploraTFT.text(tempPrintout, 0, 30);
 			// set the text color to white
-			if (old != T1) {
+			if (T1Old != T1) {
 				EsploraTFT.stroke(0, 0, 0);
 				//EsploraTFT.print("lillo");
 				EsploraTFT.setCursor(0, 30);
-				EsploraTFT.print(old);
+				EsploraTFT.print(T1Old);
 				EsploraTFT.stroke(255, 255, 255);
 				EsploraTFT.setCursor(0, 30);
-				EsploraTFT.print(T1);
-				old = T1;
+				
+				T1Old = T1;
+				EsploraTFT.print(T1Old);
+			};
+			if (barraOld != barra) {
+				EsploraTFT.stroke(0, 0, 0);
+				//EsploraTFT.print("lillo");
+				
+				EsploraTFT.setCursor(0, 70);
+				EsploraTFT.print(barraOld);
+				EsploraTFT.line(0, 60, EsploraTFT.width(), 60);
+				
+				barraOld = barra;
+				int graphwidth = map(barraOld, 0, 1023, 0, EsploraTFT.width());
+				EsploraTFT.stroke(255, 255, 255);
+				EsploraTFT.line(0, 60, graphwidth,60);
+				EsploraTFT.setCursor(0, 70);
+				EsploraTFT.print(barraOld);
+			}
+			if (stepOld != step) {
+				EsploraTFT.stroke(0, 0, 0);
+				//EsploraTFT.print("lillo");
+
+				EsploraTFT.setCursor(0, 95);
+				EsploraTFT.print(stepOld);
+				EsploraTFT.line(0, 90, EsploraTFT.width(), 90);
+				stepOld = step;
+				int stepwidth = map(stepOld, 0, stepToDo  , 0, EsploraTFT.width());
+				EsploraTFT.stroke(255, 255, 255);
+				EsploraTFT.line(0, 90, stepwidth, 90);
+				EsploraTFT.setCursor(0, 95);
+				EsploraTFT.print(stepOld);
 			}
 			// print the temperature one line below the static text
 			//temperature.toCharArray(tempPrintout, 3);
