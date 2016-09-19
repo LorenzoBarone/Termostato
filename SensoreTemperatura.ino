@@ -187,6 +187,26 @@ void TaskTemp2(void *pvParameters __attribute__((unused))) {
 		// map it to Celsius Temperature:
 		T2 = ((STEP * sensorValue) - V0) / DELTAVT;
 		nReadT2++;
+		if (Esplora.readButton(SWITCH_DOWN)) stepToDo++;
+		if (Esplora.readButton(SWITCH_UP)) stepToDo--;
+		if ((!Esplora.readButton(SWITCH_LEFT) && (!Esplora.readButton(SWITCH_RIGHT)))) {
+			int instep = abs(stepToDo);
+			int rampa = instep / 100;
+			if (rampa > 10) rampa = 10;
+			acc[0] = 5;
+			acc[1] = acc[0] + rampa;
+			acc[2] = acc[1] + rampa;
+			acc[3] = acc[2] + rampa;
+			acc[4] = acc[3] + rampa * 4;
+			acc[5] = instep - acc[4];
+			acc[6] = instep - acc[3];
+			acc[7] = instep - acc[2];
+			acc[8] = instep - acc[1];
+			acc[9] = instep - acc[0];
+			noInterrupts();
+			start = true;
+			interrupts();
+		}
 		vTaskDelay(TDELAYT2);
 	}
 	
@@ -382,6 +402,7 @@ void TaskDisplay(void *pvParameters __attribute__((unused))) {
 	int T1Old = T1;
 	int barraOld = barra;
 	int stepOld = step;
+	int stepToDoOld = stepToDo;
 	EsploraTFT.stroke(255, 255, 255);
 	EsploraTFT.setCursor(0, 30);
 	EsploraTFT.print(T1Old);
@@ -409,15 +430,15 @@ void TaskDisplay(void *pvParameters __attribute__((unused))) {
 				EsploraTFT.stroke(0, 0, 0);
 				//EsploraTFT.print("lillo");
 				
-				EsploraTFT.setCursor(0, 70);
+				EsploraTFT.setCursor(0, 65);
 				EsploraTFT.print(barraOld);
-				EsploraTFT.line(0, 60, EsploraTFT.width(), 60);
+				EsploraTFT.line(0, 55, EsploraTFT.width(), 55);
 				
 				barraOld = barra;
 				int graphwidth = map(barraOld, 0, 1023, 0, EsploraTFT.width());
 				EsploraTFT.stroke(255, 255, 255);
-				EsploraTFT.line(0, 60, graphwidth,60);
-				EsploraTFT.setCursor(0, 70);
+				EsploraTFT.line(0, 55, graphwidth,55);
+				EsploraTFT.setCursor(0, 65);
 				EsploraTFT.print(barraOld);
 			}
 			if (stepOld != step) {
@@ -428,11 +449,23 @@ void TaskDisplay(void *pvParameters __attribute__((unused))) {
 				EsploraTFT.print(stepOld);
 				EsploraTFT.line(0, 90, EsploraTFT.width(), 90);
 				stepOld = step;
-				int stepwidth = map(stepOld, 0, stepToDo  , 0, EsploraTFT.width());
+				int stepwidth = map(stepOld, 0, abs(stepToDo)  , 0, EsploraTFT.width());
 				EsploraTFT.stroke(255, 255, 255);
 				EsploraTFT.line(0, 90, stepwidth, 90);
 				EsploraTFT.setCursor(0, 95);
 				EsploraTFT.print(stepOld);
+			}
+
+			if (stepToDoOld != stepToDo) {
+				EsploraTFT.stroke(0, 0, 0);
+				//EsploraTFT.print("lillo");
+
+				EsploraTFT.setCursor(100, 95);
+				EsploraTFT.print(stepToDoOld);
+				stepToDoOld = stepToDo;
+				EsploraTFT.stroke(255, 255, 255);
+				EsploraTFT.setCursor(100, 95);
+				EsploraTFT.print(stepToDoOld);
 			}
 			// print the temperature one line below the static text
 			//temperature.toCharArray(tempPrintout, 3);
