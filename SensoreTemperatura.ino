@@ -26,10 +26,10 @@
 #define TDELAYMOTOR 5
 #define TDELAYSERIALR configTICK_RATE_HZ
 #define TDELAYDISPLAY configTICK_RATE_HZ /4
-#define ENABLE_STEPPER 8
-#define Z_DIR 3		// out 3	vecchio valore 7
-#define Z_STEP 6	// out 2	vecchio valore 11
-const TickType_t xFrequency = 4;
+#define ENABLE_STEPPER 9
+#define Z_DIR 10	// out 3	vecchio valore 7
+#define Z_STEP 5	// out 2	vecchio valore 11
+const TickType_t xFrequency = 3;
 
 //TFT pippo;
 volatile  uint32_t tmax = 0;
@@ -189,9 +189,11 @@ void TaskTemp2(void *pvParameters __attribute__((unused))) {
 		nReadT2++;
 		if (Esplora.readButton(SWITCH_DOWN)) stepToDo++;
 		if (Esplora.readButton(SWITCH_UP)) stepToDo--;
+		if (abs(Esplora.readJoystickY()) > 20)  stepToDo -= Esplora.readJoystickY() / 10;
+
 		if ((!Esplora.readButton(SWITCH_LEFT) && (!Esplora.readButton(SWITCH_RIGHT)))) {
-			int instep = abs(stepToDo);
-			int rampa = instep / 100;
+			long int instep = abs(stepToDo);
+			long int rampa = instep / 100;
 			if (rampa > 10) rampa = 10;
 			acc[0] = 5;
 			acc[1] = acc[0] + rampa;
@@ -401,8 +403,8 @@ void TaskDisplay(void *pvParameters __attribute__((unused))) {
 
 	int T1Old = T1;
 	int barraOld = barra;
-	int stepOld = step;
-	int stepToDoOld = stepToDo;
+	long int stepOld = step;
+	long int stepToDoOld = stepToDo;
 	EsploraTFT.stroke(255, 255, 255);
 	EsploraTFT.setCursor(0, 30);
 	EsploraTFT.print(T1Old);
@@ -428,43 +430,51 @@ void TaskDisplay(void *pvParameters __attribute__((unused))) {
 			};
 			if (barraOld != barra) {
 				EsploraTFT.stroke(0, 0, 0);
-				//EsploraTFT.print("lillo");
-				
+				EsploraTFT.fill(0, 0, 0);
+
 				EsploraTFT.setCursor(0, 65);
 				EsploraTFT.print(barraOld);
-				EsploraTFT.line(0, 55, EsploraTFT.width(), 55);
-				
+				EsploraTFT.rect(0, 53, EsploraTFT.width(), 5);
+
 				barraOld = barra;
 				int graphwidth = map(barraOld, 0, 1023, 0, EsploraTFT.width());
 				EsploraTFT.stroke(255, 255, 255);
-				EsploraTFT.line(0, 55, graphwidth,55);
-				EsploraTFT.setCursor(0, 65);
-				EsploraTFT.print(barraOld);
+				EsploraTFT.fill(0, 0, 255);
+				if (graphwidth) {
+					EsploraTFT.rect(0, 53, graphwidth, 5);
+					EsploraTFT.setCursor(0, 65);
+					EsploraTFT.print(barraOld);
+				}
 			}
 			if (stepOld != step) {
 				EsploraTFT.stroke(0, 0, 0);
+				EsploraTFT.fill(0, 0, 0);
 				//EsploraTFT.print("lillo");
 
 				EsploraTFT.setCursor(0, 95);
 				EsploraTFT.print(stepOld);
-				EsploraTFT.line(0, 90, EsploraTFT.width(), 90);
+				EsploraTFT.rect(0, 88, EsploraTFT.width(), 5);
 				stepOld = step;
-				int stepwidth = map(stepOld, 0, abs(stepToDo)  , 0, EsploraTFT.width());
+				int stepwidth = map(stepOld, 0, abs(stepToDo), 0, EsploraTFT.width());
 				EsploraTFT.stroke(255, 255, 255);
-				EsploraTFT.line(0, 90, stepwidth, 90);
-				EsploraTFT.setCursor(0, 95);
-				EsploraTFT.print(stepOld);
+				if (stepToDo> 0)  EsploraTFT.fill(0, 255, 8);
+				else  EsploraTFT.fill(255, 0, 8);
+				if (stepwidth) {
+					EsploraTFT.rect(0, 88, stepwidth, 5);
+					EsploraTFT.setCursor(0, 95);
+					EsploraTFT.print(stepOld);
+				}
 			}
 
 			if (stepToDoOld != stepToDo) {
 				EsploraTFT.stroke(0, 0, 0);
 				//EsploraTFT.print("lillo");
 
-				EsploraTFT.setCursor(100, 95);
+				EsploraTFT.setCursor(80, 95);
 				EsploraTFT.print(stepToDoOld);
 				stepToDoOld = stepToDo;
 				EsploraTFT.stroke(255, 255, 255);
-				EsploraTFT.setCursor(100, 95);
+				EsploraTFT.setCursor(80, 95);
 				EsploraTFT.print(stepToDoOld);
 			}
 			// print the temperature one line below the static text
